@@ -24,6 +24,7 @@
             line-height: 1.6;
             margin: 0;
             padding: 20px;
+            overflow-x: hidden; /* Prevents horizontal scrolling from animations */
         }
 
         .container { max-width: 600px; margin: 0 auto; }
@@ -111,16 +112,16 @@
 
         /* Heatmap Colors (1-10 Scale) */
         .heat-0 { background-color: var(--card-bg); color: var(--text-light); }
-        .heat-1 { background-color: #1e3a8a; color: #ffffff; } /* Blue 900 */
-        .heat-2 { background-color: #1e40af; color: #ffffff; } /* Blue 800 */
-        .heat-3 { background-color: #1d4ed8; color: #ffffff; } /* Blue 700 */
-        .heat-4 { background-color: #2563eb; color: #ffffff; } /* Blue 600 */
-        .heat-5 { background-color: #3b82f6; color: #ffffff; } /* Blue 500 */
-        .heat-6 { background-color: #60a5fa; color: #0f172a; } /* Blue 400 */
-        .heat-7 { background-color: #93c5fd; color: #0f172a; } /* Blue 300 */
-        .heat-8 { background-color: #bfdbfe; color: #0f172a; } /* Blue 200 */
-        .heat-9 { background-color: #dbeafe; color: #0f172a; } /* Blue 100 */
-        .heat-10 { background-color: #eff6ff; color: #0f172a; }/* Blue 50 */
+        .heat-1 { background-color: #1e3a8a; color: #ffffff; } 
+        .heat-2 { background-color: #1e40af; color: #ffffff; } 
+        .heat-3 { background-color: #1d4ed8; color: #ffffff; } 
+        .heat-4 { background-color: #2563eb; color: #ffffff; } 
+        .heat-5 { background-color: #3b82f6; color: #ffffff; } 
+        .heat-6 { background-color: #60a5fa; color: #0f172a; } 
+        .heat-7 { background-color: #93c5fd; color: #0f172a; } 
+        .heat-8 { background-color: #bfdbfe; color: #0f172a; } 
+        .heat-9 { background-color: #dbeafe; color: #0f172a; } 
+        .heat-10 { background-color: #eff6ff; color: #0f172a; }
 
         .legend {
             display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 16px; font-size: 0.8rem; color: var(--text-light);
@@ -148,6 +149,25 @@
 
         .hidden-file-input { display: none; }
         .empty-state { text-align: center; color: var(--text-light); padding: 20px; }
+
+        /* --- MONEY ANIMATION STYLES --- */
+        @keyframes moneyBurst {
+            0% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--x-dest), var(--y-dest)) rotate(var(--rotation)) scale(0.5);
+                opacity: 0;
+            }
+        }
+        .money-particle {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            animation: moneyBurst 1.5s ease-out forwards;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
@@ -230,8 +250,6 @@
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbylSyVtrTvfya1O8z8Oh_Djmi2LRyv-vVhKStaPTRrFGlpbwD5VbMQxsLnbXZ9bloMovQ/exec';
 
     let entries = JSON.parse(localStorage.getItem('workHoursTracker')) || {};
-    
-    // Calendar State
     let currentCalDate = new Date();
 
     function saveLocalData() {
@@ -252,6 +270,42 @@
         return new Date(dateString + 'T00:00:00').toLocaleDateString('en-US', options);
     }
 
+    // --- MONEY ANIMATION LOGIC ---
+    function triggerMoneyAnimation() {
+        const btn = document.getElementById('submitBtn');
+        const rect = btn.getBoundingClientRect();
+        const startX = rect.left + rect.width / 2;
+        const startY = rect.top + rect.height / 2;
+        const emojis = ['💵', '💰', '💸', '🤑', '💲', '💎'];
+
+        // Create 25 particles
+        for (let i = 0; i < 25; i++) {
+            const particle = document.createElement('span');
+            particle.className = 'money-particle';
+            particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            
+            // Randomize trajectory for a "fountain" effect
+            const xDest = (Math.random() - 0.5) * 300; // -150px to 150px left/right
+            const yDest = (Math.random() * -250) - 100;  // -100px to -350px upwards
+            const rotation = (Math.random() - 0.5) * 720; // -360 to 360 degree spin
+            const size = Math.random() * 1.5 + 1.5; // 1.5rem to 3rem
+
+            particle.style.left = `${startX}px`;
+            particle.style.top = `${startY}px`;
+            particle.style.setProperty('--x-dest', `${xDest}px`);
+            particle.style.setProperty('--y-dest', `${yDest}px`);
+            particle.style.setProperty('--rotation', `${rotation}deg`);
+            particle.style.fontSize = `${size}rem`;
+            
+            document.body.appendChild(particle);
+
+            // Clean up the DOM after the animation finishes (1.5s)
+            setTimeout(() => {
+                particle.remove();
+            }, 1500);
+        }
+    }
+
     // --- Calendar Logic ---
     function changeMonth(direction) {
         currentCalDate.setMonth(currentCalDate.getMonth() + direction);
@@ -260,7 +314,6 @@
 
     function renderCalendar() {
         const grid = document.getElementById('calendarGrid');
-        // Clear previous days (keep the 7 day-name headers)
         while (grid.children.length > 7) {
             grid.removeChild(grid.lastChild);
         }
@@ -274,20 +327,17 @@
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-        // Add empty cells for padding
         for (let i = 0; i < firstDay; i++) {
             const emptyCell = document.createElement('div');
             emptyCell.className = 'calendar-day empty';
             grid.appendChild(emptyCell);
         }
 
-        // Add days
         for (let day = 1; day <= daysInMonth; day++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const entry = entries[dateStr];
             const hours = entry ? entry.hours : 0;
             
-            // Calculate heat level (1-10 scale)
             let heatLevel = 0;
             if (hours > 0) {
                 heatLevel = Math.min(Math.max(Math.ceil(hours), 1), 10);
@@ -319,6 +369,9 @@
             alert('Please enter a valid date and hours.');
             return;
         }
+
+        // 🎉 TRIGGER THE FUN ANIMATION IMMEDIATELY 🎉
+        triggerMoneyAnimation();
 
         // 1. Save locally instantly
         entries[date] = { hours, note };
