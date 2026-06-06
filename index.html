@@ -14,6 +14,7 @@
             --text-light: #64748b;
             --border: #e2e8f0;
             --danger: #ef4444;
+            --success: #22c55e;
         }
 
         body {
@@ -25,11 +26,7 @@
             padding: 20px;
         }
 
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
+        .container { max-width: 600px; margin: 0 auto; }
         h1, h2, h3 { margin-top: 0; }
 
         .card {
@@ -49,77 +46,49 @@
         .summary-box h2 { margin-bottom: 8px; font-size: 1.2rem; opacity: 0.9; }
         .summary-box .total { font-size: 3rem; font-weight: 800; margin: 0; }
         .summary-box .subtext { font-size: 0.9rem; opacity: 0.8; margin-top: 4px; }
+        .summary-box .sync-badge { 
+            font-size: 0.8rem; margin-top: 12px; opacity: 0.9; 
+            background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; display: inline-block;
+        }
 
         .form-group { margin-bottom: 16px; }
         label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
-        input, textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 1rem;
-            box-sizing: border-box;
-            font-family: inherit;
+        input {
+            width: 100%; padding: 10px; border: 1px solid var(--border);
+            border-radius: 6px; font-size: 1rem; box-sizing: border-box; font-family: inherit;
         }
-        input:focus, textarea:focus {
-            outline: 2px solid var(--primary);
-            border-color: transparent;
-        }
+        input:focus { outline: 2px solid var(--primary); border-color: transparent; }
 
         button {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.2s;
+            background-color: var(--primary); color: white; border: none;
+            padding: 12px 20px; border-radius: 6px; font-size: 1rem; font-weight: 600;
+            cursor: pointer; width: 100%; transition: background 0.2s;
         }
         button:hover { background-color: var(--primary-hover); }
+        button:disabled { background-color: var(--text-light); cursor: not-allowed; }
         
         .btn-secondary {
-            background-color: var(--bg);
-            color: var(--text);
-            border: 1px solid var(--border);
-            margin-top: 8px;
+            background-color: var(--bg); color: var(--text); border: 1px solid var(--border); margin-top: 8px;
         }
         .btn-secondary:hover { background-color: var(--border); }
         
         .btn-danger {
-            background-color: transparent;
-            color: var(--danger);
-            border: 1px solid var(--danger);
-            padding: 4px 8px;
-            font-size: 0.8rem;
-            width: auto;
+            background-color: transparent; color: var(--danger); border: 1px solid var(--danger);
+            padding: 4px 8px; font-size: 0.8rem; width: auto;
         }
         .btn-danger:hover { background-color: var(--danger); color: white; }
 
-        .week-block {
-            border-bottom: 1px solid var(--border);
-            padding: 16px 0;
-        }
+        .week-block { border-bottom: 1px solid var(--border); padding: 16px 0; }
         .week-block:last-child { border-bottom: none; }
         
         .week-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 700;
-            font-size: 1.1rem;
-            margin-bottom: 12px;
-            color: var(--primary);
+            display: flex; justify-content: space-between; align-items: center;
+            font-weight: 700; font-size: 1.1rem; margin-bottom: 12px; color: var(--primary);
         }
 
         .day-entry {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px dashed var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; border-bottom: 1px dashed var(--border);
         }
         .day-entry:last-child { border-bottom: none; }
         
@@ -128,16 +97,9 @@
         .day-note { font-size: 0.85rem; color: var(--text-light); }
         .day-hours { font-weight: 700; margin-right: 12px; }
 
-        .data-controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .data-controls button { flex: 1; font-size: 0.9rem; padding: 10px; }
-        
         .hidden-file-input { display: none; }
         .empty-state { text-align: center; color: var(--text-light); padding: 20px; }
-    </style>
+    </style each>
 </head>
 <body>
 
@@ -146,6 +108,7 @@
         <h2>Current Week Total</h2>
         <div class="total" id="currentWeekTotal">0</div>
         <div class="subtext">Hours (Monday - Friday)</div>
+        <div class="sync-badge" id="syncStatus">💾 Local Storage Only</div>
     </div>
 
     <div class="card">
@@ -163,7 +126,7 @@
                 <label for="note">Notes (Optional)</label>
                 <input type="text" id="note" placeholder="e.g., Regular shift, Overtime, Project X">
             </div>
-            <button type="submit">Save Entry</button>
+            <button type="submit" id="submitBtn">Save Entry</button>
         </form>
     </div>
 
@@ -177,31 +140,35 @@
     <div class="card">
         <h2>Data Management</h2>
         <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 12px;">
-            ⚠️ Data is saved in your browser. <strong>Export your data regularly</strong> to avoid losing it if you clear your cache or switch devices.
+            ✅ Your data is now permanently backed up to your Google Sheet. You can open the sheet and go to <strong>File > Download > Comma Separated Values (.csv)</strong> anytime.
         </p>
-        <div class="data-controls">
-            <button class="btn-secondary" onclick="exportData()">⬇ Export JSON</button>
-            <button class="btn-secondary" onclick="document.getElementById('importFile').click()">⬆ Import JSON</button>
-            <input type="file" id="importFile" class="hidden-file-input" accept=".json" onchange="importData(this)">
-        </div>
-        <button class="btn-danger" style="width: 100%; margin-top: 10px;" onclick="clearAllData()">🗑 Clear All Data</button>
+        <button class="btn-secondary" onclick="window.open('https://sheets.google.com', '_blank')">Open Google Sheet</button>
+        <button class="btn-danger" style="width: 100%; margin-top: 10px;" onclick="clearLocalData()">🗑 Clear Local Browser Cache Only</button>
     </div>
 </div>
 
 <script>
-    // --- Data Management ---
+    // ==========================================
+    // PASTE YOUR GOOGLE SCRIPT URL BELOW
+    // ==========================================
+    const SCRIPT_URL = 'https://script.google.com/u/0/home/projects/1OLMkY64pmr54rdXlasNK8-VLCscGr-9qDD9wkfMKLAS_t_f7sIKUYEda/edit';
+
     let entries = JSON.parse(localStorage.getItem('workHoursTracker')) || {};
 
-    function saveData() {
+    // Update UI badge based on configuration
+    if (SCRIPT_URL && SCRIPT_URL.startsWith('https://script.google.com')) {
+        document.getElementById('syncStatus').textContent = '☁️ Auto-syncing to Google Sheets';
+    }
+
+    function saveLocalData() {
         localStorage.setItem('workHoursTracker', JSON.stringify(entries));
         render();
     }
 
-    // --- Date Helpers ---
     function getMonday(dateString) {
         const d = new Date(dateString);
         const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         const monday = new Date(d.setDate(diff));
         return monday.toISOString().split('T')[0];
     }
@@ -211,30 +178,68 @@
         return new Date(dateString).toLocaleDateString('en-US', options);
     }
 
-    // --- Core Logic ---
     document.getElementById('hoursForm').addEventListener('submit', function(e) {
         e.preventDefault();
         const date = document.getElementById('date').value;
         const hours = parseFloat(document.getElementById('hours').value);
         const note = document.getElementById('note').value.trim();
+        const submitBtn = document.getElementById('submitBtn');
+        const originalBtnText = submitBtn.textContent;
 
         if (!date || isNaN(hours)) {
             alert('Please enter a valid date and hours.');
             return;
         }
 
+        // 1. Save locally instantly for a snappy UI
         entries[date] = { hours, note };
-        saveData();
-        
-        // Reset form but keep date as today for convenience
-        document.getElementById('hours').value = '';
-        document.getElementById('note').value = '';
+        saveLocalData();
+
+        // 2. Sync to Google Sheets
+        if (SCRIPT_URL && SCRIPT_URL.startsWith('https://script.google.com')) {
+            submitBtn.textContent = 'Saving to Cloud...';
+            submitBtn.disabled = true;
+
+            // We use 'text/plain' to bypass CORS preflight checks, which Google Apps Script struggles with
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ date, hours, note }),
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    submitBtn.textContent = 'Saved to Cloud ✓';
+                    submitBtn.style.backgroundColor = 'var(--success)';
+                }
+            })
+            .catch(error => {
+                console.error('Cloud sync error:', error);
+                submitBtn.textContent = 'Cloud Sync Failed (Saved Locally)';
+                submitBtn.style.backgroundColor = 'var(--danger)';
+            })
+            .finally(() => {
+                setTimeout(() => {
+                    submitBtn.textContent = originalBtnText;
+                    submitBtn.style.backgroundColor = '';
+                    submitBtn.disabled = false;
+                    // Reset form fields but keep date as today
+                    document.getElementById('hours').value = '';
+                    document.getElementById('note').value = '';
+                }, 1500);
+            });
+        } else {
+            // Fallback if no script URL is provided
+            document.getElementById('hours').value = '';
+            document.getElementById('note').value = '';
+        }
     });
 
     function deleteEntry(date) {
-        if (confirm(`Delete entry for ${formatDateDisplay(date)}?`)) {
+        if (confirm(`Delete entry for ${formatDateDisplay(date)}? (Note: You must also delete it manually in your Google Sheet)`))
+        {
             delete entries[date];
-            saveData();
+            saveLocalData();
         }
     }
 
@@ -242,7 +247,7 @@
         const historyContainer = document.getElementById('historyContainer');
         historyContainer.innerHTML = '';
 
-        const dates = Object.keys(entries).sort().reverse(); // Newest first
+        const dates = Object.keys(entries).sort().reverse();
         
         if (dates.length === 0) {
             historyContainer.innerHTML = '<div class="empty-state">No hours logged yet.</div>';
@@ -250,7 +255,6 @@
             return;
         }
 
-        // Group by week (Monday)
         const weeks = {};
         dates.forEach(date => {
             const monday = getMonday(date);
@@ -261,17 +265,15 @@
             weeks[monday].total += entries[date].hours;
         });
 
-        // Calculate Current Week Total
         const today = new Date().toISOString().split('T')[0];
         const currentWeekMonday = getMonday(today);
         const currentWeekData = weeks[currentWeekMonday];
         document.getElementById('currentWeekTotal').textContent = currentWeekData ? currentWeekData.total : 0;
 
-        // Render History
         Object.keys(weeks).sort().reverse().forEach(monday => {
             const weekData = weeks[monday];
             const weekEnd = new Date(monday);
-            weekEnd.setDate(weekEnd.getDate() + 4); // Friday
+            weekEnd.setDate(weekEnd.getDate() + 4); 
             const weekLabel = `${formatDateDisplay(monday)} - ${formatDateDisplay(weekEnd.toISOString().split('T')[0])}`;
 
             const weekBlock = document.createElement('div');
@@ -303,47 +305,15 @@
         });
     }
 
-    // --- Export / Import ---
-    function exportData() {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(entries));
-        const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", "work_hours_backup_" + new Date().toISOString().split('T')[0] + ".json");
-        document.body.appendChild(downloadAnchorNode);
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
-    }
-
-    function importData(input) {
-        const file = input.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const imported = JSON.parse(e.target.result);
-                if (confirm("This will merge imported data with your current data. Continue?")) {
-                    entries = { ...entries, ...imported };
-                    saveData();
-                    alert("Data imported successfully!");
-                }
-            } catch (err) {
-                alert("Invalid JSON file.");
-            }
-        };
-        reader.readAsText(file);
-        input.value = ''; // Reset input
-    }
-
-    function clearAllData() {
-        if (confirm("⚠️ ARE YOU SURE? This will permanently delete all your logged hours. Make sure you have exported a backup first!")) {
+    function clearLocalData() {
+        if (confirm("This will clear the history from this specific browser. Your permanent data is safe in your Google Sheet. Continue?")) {
             entries = {};
-            saveData();
+            localStorage.removeItem('workHoursTracker');
+            render();
         }
     }
 
-    // --- Initialization ---
-    document.getElementById('date').valueAsDate = new Date(); // Set default to today
+    document.getElementById('date').valueAsDate = new Date();
     render();
 </script>
 
