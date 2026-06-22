@@ -242,7 +242,7 @@
             ✅ Your data is permanently backed up to your Google Sheet.
         </p>
         <button class="btn-secondary" onclick="window.open('https://sheets.google.com', '_blank')">Open Google Sheet</button>
-        <button class="btn-secondary" onclick="forceSync()">🔄 Force Re-Sync from Google Sheets</button>
+        <button class="btn-secondary" onclick="forceSync()"> Force Re-Sync from Google Sheets</button>
         <button class="btn-danger" style="width: 100%; margin-top: 10px;" onclick="clearLocalData()">🗑 Clear Local Browser Cache Only</button>
     </div>
 </div>
@@ -253,7 +253,7 @@
     let entries = {};
     let currentCalDate = new Date();
 
-    // --- Date Helpers (Timezone-Safe) ---
+    // --- Date Helpers ---
     function formatDateISO(date) {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -262,12 +262,19 @@
     }
 
     function parseDate(dateString) {
-        const parts = dateString.split('-');
-        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        // Handle YYYY-MM-DD format
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            const parts = dateString.split('-');
+            return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        }
+        // Fallback to standard Date parsing
+        const d = new Date(dateString);
+        return isNaN(d.getTime()) ? null : d;
     }
 
     function getMonday(dateString) {
         const d = parseDate(dateString);
+        if (!d) return null;
         const day = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
         const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         d.setDate(diff);
@@ -276,6 +283,7 @@
 
     function formatDateDisplay(dateString) {
         const d = parseDate(dateString);
+        if (!d) return 'Invalid Date';
         const options = { weekday: 'short', month: 'short', day: 'numeric' };
         return d.toLocaleDateString('en-US', options);
     }
@@ -296,7 +304,6 @@
             return true;
         } catch (error) {
             console.error('Fetch error:', error);
-            // Fallback to local storage
             entries = JSON.parse(localStorage.getItem('workHoursTracker')) || {};
             return false;
         }
@@ -356,7 +363,6 @@
         document.getElementById('calendarTitle').textContent = 
             currentCalDate.toLocaleString('default', { month: 'long' }) + ' ' + year;
 
-        // Calculate first day offset (Monday = 0, Sunday = 6)
         let firstDay = new Date(year, month, 1).getDay();
         firstDay = (firstDay === 0) ? 6 : firstDay - 1;
         
@@ -401,16 +407,14 @@
 
         triggerMoneyAnimation();
 
-        // Save locally first
         entries[date] = { hours, note };
         saveLocalData();
 
         const loggedDate = parseDate(date);
-        if (loggedDate.getMonth() === currentCalDate.getMonth() && loggedDate.getFullYear() === currentCalDate.getFullYear()) {
+        if (loggedDate && loggedDate.getMonth() === currentCalDate.getMonth() && loggedDate.getFullYear() === currentCalDate.getFullYear()) {
             renderCalendar();
         }
 
-        // Sync to Google Sheets
         submitBtn.textContent = 'Saving to Cloud...';
         submitBtn.disabled = true;
 
@@ -443,18 +447,15 @@
         }
     });
 
-    // --- Delete Entry (Now Syncs to Google Sheets!) ---
     async function deleteEntry(date) {
         if (!confirm(`Delete entry for ${formatDateDisplay(date)}? This will also remove it from your Google Sheet.`)) {
             return;
         }
 
-        // Delete locally first
         delete entries[date];
         saveLocalData();
         renderCalendar();
 
-        // Sync delete to Google Sheets
         try {
             const response = await fetch(SCRIPT_URL, {
                 method: 'POST',
@@ -466,11 +467,10 @@
             console.log('Delete synced to Google Sheets');
         } catch (error) {
             console.error('Delete sync error:', error);
-            alert('Deleted locally, but failed to sync to Google Sheets. Try the "Force Re-Sync" button.');
+            alert('Deleted locally, but failed to sync to Google Sheets.');
         }
     }
 
-    // --- Render History ---
     function render() {
         const historyContainer = document.getElementById('historyContainer');
         historyContainer.innerHTML = '';
@@ -486,6 +486,7 @@
         const weeks = {};
         dates.forEach(date => {
             const monday = getMonday(date);
+            if (!monday) return; // Skip invalid dates
             if (!weeks[monday]) weeks[monday] = { days: {}, total: 0 };
             weeks[monday].days[date] = entries[date];
             weeks[monday].total += entries[date].hours;
@@ -500,7 +501,7 @@
             const weekData = weeks[monday];
             const weekStart = parseDate(monday);
             const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekEnd.getDate() + 6); // Sunday (7 days after Monday)
+            weekEnd.setDate(weekEnd.getDate() + 6);
             const weekLabel = `${formatDateDisplay(monday)} - ${formatDateDisplay(formatDateISO(weekEnd))}`;
 
             const weekBlock = document.createElement('div');
@@ -539,11 +540,9 @@
         }
     }
 
-    // --- Initialization ---
     async function init() {
         document.getElementById('date').valueAsDate = new Date();
         
-        // Fetch data from Google Sheets on load
         const success = await fetchFromGoogleSheets();
         
         document.getElementById('loadingOverlay').style.display = 'none';
