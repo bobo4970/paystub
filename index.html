@@ -105,21 +105,22 @@
         .calendar-day.empty { background: transparent; border: none; pointer-events: none; }
         
         .calendar-day .hours-badge {
-            font-size: 0.65rem; font-weight: 700; background: rgba(0,0,0,0.3);
+            font-size: 0.65rem; font-weight: 700; background: rgba(0,0,0,0.15);
             padding: 1px 4px; border-radius: 4px; margin-top: 2px;
         }
 
-        .heat-0 { background-color: var(--card-bg); color: var(--text-light); }
-        .heat-1 { background-color: #1e3a8a; color: #ffffff; }
-        .heat-2 { background-color: #1e40af; color: #ffffff; }
-        .heat-3 { background-color: #1d4ed8; color: #ffffff; }
-        .heat-4 { background-color: #2563eb; color: #ffffff; }
-        .heat-5 { background-color: #3b82f6; color: #ffffff; }
-        .heat-6 { background-color: #60a5fa; color: #0f172a; }
-        .heat-7 { background-color: #93c5fd; color: #0f172a; }
-        .heat-8 { background-color: #bfdbfe; color: #0f172a; }
-        .heat-9 { background-color: #dbeafe; color: #0f172a; }
-        .heat-10 { background-color: #eff6ff; color: #0f172a; }
+        /* INVERTED HEATMAP: White/Light = Less, Deep Blue = More */
+        .heat-0 { background-color: var(--bg); color: var(--text-light); border: 1px solid var(--border); }
+        .heat-1 { background-color: #f8fafc; color: #0f172a; } /* Almost white */
+        .heat-2 { background-color: #e2e8f0; color: #0f172a; } 
+        .heat-3 { background-color: #cbd5e1; color: #0f172a; } 
+        .heat-4 { background-color: #93c5fd; color: #0f172a; } /* Light blue */
+        .heat-5 { background-color: #60a5fa; color: #0f172a; } 
+        .heat-6 { background-color: #3b82f6; color: #ffffff; } /* Mid blue */
+        .heat-7 { background-color: #2563eb; color: #ffffff; } 
+        .heat-8 { background-color: #1d4ed8; color: #ffffff; } 
+        .heat-9 { background-color: #1e40af; color: #ffffff; } 
+        .heat-10 { background-color: #1e3a8a; color: #ffffff; } /* Deep blue */
 
         .legend {
             display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 16px; font-size: 0.8rem; color: var(--text-light);
@@ -200,11 +201,11 @@
         </div>
         <div class="legend">
             <span>Less</span>
-            <div class="legend-box heat-0"></div>
-            <div class="legend-box heat-2"></div>
-            <div class="legend-box heat-4"></div>
-            <div class="legend-box heat-6"></div>
-            <div class="legend-box heat-8"></div>
+            <div class="legend-box heat-1"></div>
+            <div class="legend-box heat-3"></div>
+            <div class="legend-box heat-5"></div>
+            <div class="legend-box heat-7"></div>
+            <div class="legend-box heat-9"></div>
             <div class="legend-box heat-10"></div>
             <span>More (10h+)</span>
         </div>
@@ -253,7 +254,6 @@
     let entries = {};
     let currentCalDate = new Date();
 
-    // --- Date Helpers ---
     function formatDateISO(date) {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -262,12 +262,10 @@
     }
 
     function parseDate(dateString) {
-        // Handle YYYY-MM-DD format
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
             const parts = dateString.split('-');
             return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         }
-        // Fallback to standard Date parsing
         const d = new Date(dateString);
         return isNaN(d.getTime()) ? null : d;
     }
@@ -275,7 +273,7 @@
     function getMonday(dateString) {
         const d = parseDate(dateString);
         if (!d) return null;
-        const day = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+        const day = d.getDay(); 
         const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         d.setDate(diff);
         return formatDateISO(d);
@@ -288,7 +286,6 @@
         return d.toLocaleDateString('en-US', options);
     }
 
-    // --- Data Sync ---
     function saveLocalData() {
         localStorage.setItem('workHoursTracker', JSON.stringify(entries));
         render();
@@ -317,7 +314,6 @@
         alert('Sync complete!');
     }
 
-    // --- Money Animation ---
     function triggerMoneyAnimation() {
         const btn = document.getElementById('submitBtn');
         const rect = btn.getBoundingClientRect();
@@ -347,7 +343,6 @@
         }
     }
 
-    // --- Calendar ---
     function changeMonth(direction) {
         currentCalDate.setMonth(currentCalDate.getMonth() + direction);
         renderCalendar();
@@ -391,7 +386,6 @@
         }
     }
 
-    // --- Form Submission ---
     document.getElementById('hoursForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const date = document.getElementById('date').value;
@@ -486,7 +480,7 @@
         const weeks = {};
         dates.forEach(date => {
             const monday = getMonday(date);
-            if (!monday) return; // Skip invalid dates
+            if (!monday) return; 
             if (!weeks[monday]) weeks[monday] = { days: {}, total: 0 };
             weeks[monday].days[date] = entries[date];
             weeks[monday].total += entries[date].hours;
